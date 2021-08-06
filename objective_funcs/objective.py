@@ -28,9 +28,7 @@ class TuneNN(object):
 
     def objective_function(self, config, epochs=100):
         # minimise validation error
-        depth = config['depth']
-
-        model = NiN(depth, 8, 25, True, 0)
+        model = NiN(config['depth'], 8, 25, True, 0)
         model.to(self.device)
         init_model = deepcopy(model)
         model.train()

@@ -145,28 +145,12 @@ def SOTL(train_history):
     return sum(train_history)
 
 
-def TRAIN_ACC(model, train_eval_loader, device):
+def ACC(model, loader, device):
     model.eval()
     num_correct = 0
-    len_loader = len(train_eval_loader.dataset)
+    len_loader = len(loader.dataset)
 
-    for data, target in train_eval_loader:
-        data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
-        logits = model(data)
-
-        pred = logits.data.max(1, keepdim=True)[1]  # get the index of the max logits
-        batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
-        num_correct += batch_correct.sum()
-
-    return -num_correct.item() / len_loader
-
-
-def VAL_ACC(model, val_loader, device):
-    model.eval()
-    num_correct = 0
-    len_loader = len(val_loader.dataset)
-
-    for data, target in val_loader:
+    for data, target in loader:
         data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
         logits = model(data)
 
@@ -271,13 +255,13 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
     if objective == OT.CE_TRAIN:
         return CE_TRAIN(train_history)
     elif objective == OT.TRAIN_ACC:
-        return TRAIN_ACC(model, train_eval_loader, device)
+        return ACC(model, train_eval_loader, device)
     elif objective == OT.MAG_FLATNESS:
-        return MAG_FLATNESS(model, train_eval_loader, TRAIN_ACC(model, train_eval_loader, device), seed)
+        return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.PATH_NORM:
         return PATH_NORM(model, device)
     elif objective == OT.VAL_ACC:
-        return VAL_ACC(model, val_loader, device)
+        return ACC(model, val_loader, device)
     elif objective == OT.SOTL:
         return SOTL(train_history)
     elif objective == OT.FRO_DIST:
@@ -287,7 +271,7 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
     elif objective == OT.LOG_PROD_OF_SPEC:
         return LOG_PROD_OF_SPEC(model)
     elif objective == OT.PACBAYES_INIT:
-        return PACBAYES_INIT(model, init_model, train_eval_loader, TRAIN_ACC(model, train_eval_loader, device), seed)
+        return PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.DIST_SPEC_INIT_FFT:
         return DIST_SPEC_INIT_FFT(model, init_model)
     else:

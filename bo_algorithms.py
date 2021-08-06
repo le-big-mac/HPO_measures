@@ -13,6 +13,7 @@ from copy import deepcopy
 import GPyOpt
 from objective_funcs.objective import TuneNN
 from objective_funcs.config import objective_type
+from objective_funcs.models import get_converged_performance
 import torch
 from functools import partial
 
@@ -128,6 +129,11 @@ elif args.bo_method == 'tpe':
     bo_results = [{'config': item['config'], 'loss': item['loss'], 'cost': item['cost']} for item in trials.results]
     best_objective_value = np.min([y['loss'] for y in trials.results])
     print(f'Best hyperparams={best_hyperparam} with objective value={best_objective_value}')
+
+    test_acc = get_converged_performance(best_hyperparam, device, args.data_dir, args.dataset)
+
+    with open(os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs)), 'a+') as f:
+        f.write("Seed: {}, Test acc: {}".format(args.seed, test_acc))
 
 elif args.bo_method == 'gpbo':
 
