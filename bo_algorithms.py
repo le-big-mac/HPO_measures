@@ -1,19 +1,16 @@
 import argparse
-import json
 import os
-import ConfigSpace
 from hpbandster.optimizers.bohb import BOHB
 import hpbandster.core.nameserver as hpns
 from hpbandster.core.worker import Worker
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from hyperopt import fmin, tpe, Trials
 import pickle
 import numpy as np
 import random
-from copy import deepcopy
 import GPyOpt
 from objective_funcs.objective import TuneNN
 from objective_funcs.config import objective_type
-from objective_funcs.models import get_converged_performance
+from objective_funcs.measures import get_converged_performance
 import torch
 from functools import partial
 

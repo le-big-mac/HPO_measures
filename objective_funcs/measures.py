@@ -1,10 +1,10 @@
 from contextlib import contextmanager
 from copy import deepcopy
 import math
-from typing import Dict, List, Optional, Tuple
-
+from typing import List, Optional, Tuple
 import numpy as np
 import torch
+import torch.optim as optim
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 
@@ -276,3 +276,33 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
         return DIST_SPEC_INIT_FFT(model, init_model)
     else:
         raise KeyError
+
+
+def get_converged_performance(config, device, data_dir, dataset_type):
+    model = NiN(config['depth'], 8, 25, True, 0)
+    model.to(device)
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
+    train_dataset, train_eval_loader, _, test_loader = get_dataloaders(data_dir, dataset_type, False, device)
+    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, num_workers=0)
+
+    for _ in range(300):
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+
+            optimizer.zero_grad()
+
+            logits = model(data)
+            cross_entropy = F.cross_entropy(logits, target)
+
+            cross_entropy.backward()
+
+            optimizer.step()
+
+        train_acc = -ACC(model, train_eval_loader, device)
+        if train_acc > 0.99:
+            break
+
+    test_acc = -ACC(model, test_loader, device)
+
+    return test_acc

@@ -1,10 +1,5 @@
 from torch import nn
-from objective_funcs.dataset_helpers import get_dataloaders
-from objective_funcs.config import ObjectiveType as OT
-from torch.utils.data import DataLoader
-import torch.nn.functional as F
-import torch.optim as optim
-from objective_funcs.measures import ACC
+
 
 class Simple_NN(nn.Module):
     def __init__(self, input_size, layer1_size, layer2_size, layer3_size, dropout_rate):
@@ -100,33 +95,3 @@ class NiN(nn.Module):
         x = self.avgpool(x)
 
         return x.squeeze()
-
-
-def get_converged_performance(config, device, data_dir, dataset_type):
-    model = NiN(config['depth'], 8, 25, True, 0)
-    model.to(device)
-    model.train()
-    optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
-    train_dataset, train_eval_loader, _, test_loader = get_dataloaders(data_dir, dataset_type, False, device)
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, num_workers=0)
-
-    for _ in range(300):
-        for batch_idx, (data, target) in enumerate(train_loader):
-            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
-
-            optimizer.zero_grad()
-
-            logits = model(data)
-            cross_entropy = F.cross_entropy(logits, target)
-
-            cross_entropy.backward()
-
-            optimizer.step()
-
-        train_acc = -ACC(model, train_eval_loader, device)
-        if train_acc > 0.99:
-            break
-
-    test_acc = -ACC(model, test_loader, device)
-
-    return test_acc
