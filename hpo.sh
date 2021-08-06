@@ -20,6 +20,9 @@
 
 # run the application
 
+module load python3/anaconda
+source activate generalization
+
 seeds="0 17 43"
 
 for s in $seeds; do

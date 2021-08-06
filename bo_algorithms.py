@@ -122,7 +122,7 @@ elif args.bo_method == 'tpe':
     # initialise and run TPE
     trials = Trials()
     objective = partial(b.eval, epochs=args.epochs)
-    best_hyperparam = fmin(b.eval, space=search_space, algo=tpe.suggest, max_evals=int(args.n_iters+args.n_init),
+    best_hyperparam = fmin(objective, space=search_space, algo=tpe.suggest, max_evals=int(args.n_iters+args.n_init),
                            trials=trials)
     # process the returned results to give the same format
     bo_results = [{'config': item['config'], 'loss': item['loss'], 'cost': item['cost']} for item in trials.results]
