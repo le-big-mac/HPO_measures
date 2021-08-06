@@ -36,6 +36,12 @@ np.random.seed(args.seed)
 random.seed(args.seed)
 torch.manual_seed(args.seed)
 
+# warmup GPU for cost timing
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+a = torch.rand((3000, 3000), device=device)
+b = torch.rand((3000, 3000), device=device)
+torch.matmul(a, b)
+
 # define the objective problem
 b = TuneNN(objective=args.objective, data_dir=args.data_dir, dataset=args.dataset, seed=args.seed,
            bo_method=args.bo_method)
