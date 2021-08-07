@@ -7,8 +7,10 @@ import torch
 import torch.optim as optim
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
+import torch.functional as F
 
 from objective_funcs.config import ObjectiveType as OT
+from objective_funcs.dataset_helpers import get_dataloaders
 from objective_funcs.models import NiN
 
 
@@ -279,12 +281,12 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
 
 
 def get_converged_performance(config, device, data_dir, dataset_type):
-    model = NiN(config['depth'], 8, 25, True, 0)
+    model = NiN(int(config['depth']), 8, 25, True, 0)
     model.to(device)
     model.train()
-    optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
+    optimizer = optim.SGD(model.parameters(), lr=float(config["lr"]), momentum=0.9, weight_decay=0)
     train_dataset, train_eval_loader, _, test_loader = get_dataloaders(data_dir, dataset_type, False, device)
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=int(config['batch_size']), shuffle=True, num_workers=0)
 
     for _ in range(300):
         for batch_idx, (data, target) in enumerate(train_loader):
