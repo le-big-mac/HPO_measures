@@ -66,6 +66,9 @@ class TuneNN(object):
         torch.cuda.synchronize()
         run_cost = start.elapsed_time(end)
 
+        del model
+        del init_model
+
         return val_error, run_cost
 
     def eval(self, config, epochs=100):
