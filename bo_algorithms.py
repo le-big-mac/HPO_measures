@@ -127,7 +127,7 @@ elif args.bo_method == 'tpe':
     best_objective_value = np.min([y['loss'] for y in trials.results])
     print(f'Best hyperparams={best_hyperparam} with objective value={best_objective_value}')
 
-    torch.cuda.empty_cache()
+    del b
 
     test_acc = get_converged_performance(best_hyperparam, device, args.data_dir, args.dataset)
 
