@@ -10,7 +10,6 @@ import random
 import GPyOpt
 from objective_funcs.objective import TuneNN
 from objective_funcs.config import objective_type
-from objective_funcs.measures import get_converged_performance
 import torch
 from functools import partial
 
@@ -39,6 +38,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 a = torch.rand((3000, 3000), device=device)
 b = torch.rand((3000, 3000), device=device)
 torch.matmul(a, b)
+del a
+del b
 
 # define the objective problem
 b = TuneNN(objective=args.objective, data_dir=args.data_dir, dataset=args.dataset, seed=args.seed,
@@ -126,13 +127,6 @@ elif args.bo_method == 'tpe':
     bo_results = [{'config': item['config'], 'loss': item['loss'], 'cost': item['cost']} for item in trials.results]
     best_objective_value = np.min([y['loss'] for y in trials.results])
     print(f'Best hyperparams={best_hyperparam} with objective value={best_objective_value}')
-
-    del b
-
-    test_acc = get_converged_performance(best_hyperparam, device, args.data_dir, args.dataset)
-
-    with open(os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs)), 'a+') as f:
-        f.write("Seed: {}, Test acc: {}".format(args.seed, test_acc))
 
 elif args.bo_method == 'gpbo':
 

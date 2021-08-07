@@ -27,4 +27,5 @@ seeds="0 17 43"
 
 for s in $seeds; do
   python3 bo_algorithms.py --seed="$s" --objective="$1" --epochs="$2" --dataset="$3" --bo_method="tpe"
+  python3 get_final_performance.py --seed="$s" --objective="$1" --epochs="$2" --dataset="$3" --bo_method="tpe"
 done
