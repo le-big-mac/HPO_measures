@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
-import torch.functional as F
+import torch.nn.functional as F
 
 from objective_funcs.config import ObjectiveType as OT
 from objective_funcs.dataset_helpers import get_dataloaders
