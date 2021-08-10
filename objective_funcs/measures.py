@@ -150,7 +150,7 @@ def ACC(model, loader, device):
     len_loader = len(loader.dataset)
 
     for data, target in loader:
-        data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+        data, target = data.to(device), target.to(device)
         logits = model(data)
 
         pred = logits.data.max(1, keepdim=True)[1]  # get the index of the max logits
