@@ -47,7 +47,7 @@ train_loader = DataLoader(train_dataset, batch_size=int(best_hparams['batch_size
 
 for _ in range(200):
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+        data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()
 

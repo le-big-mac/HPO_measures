@@ -45,7 +45,7 @@ class TuneNN(object):
             batch_losses = []
 
             for batch_idx, (data, target) in enumerate(train_loader):
-                data, target = data.to(self.device, non_blocking=True), target.to(self.device, non_blocking=True)
+                data, target = data.to(self.device), target.to(self.device)
 
                 optimizer.zero_grad()
 

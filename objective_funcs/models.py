@@ -36,31 +36,31 @@ class NiNBlock(nn.Module):
 
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=2, padding=1)
         self.bn1 = nn.BatchNorm2d(planes) if batch_norm else lambda x: x
-        self.dp1 = nn.Dropout2d(p=dropout_prob)
+        # self.dp1 = nn.Dropout2d(p=dropout_prob)
 
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=1, stride=1)
         self.bn2 = nn.BatchNorm2d(planes) if batch_norm else lambda x: x
-        self.dp2 = nn.Dropout2d(p=dropout_prob)
+        # self.dp2 = nn.Dropout2d(p=dropout_prob)
 
         self.conv3 = nn.Conv2d(planes, planes, kernel_size=1, stride=1)
         self.bn3 = nn.BatchNorm2d(planes) if batch_norm else lambda x: x
-        self.dp3 = nn.Dropout2d(p=dropout_prob)
+        # self.dp3 = nn.Dropout2d(p=dropout_prob)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.dp1(x)
+        # x = self.dp1(x)
 
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.relu(x)
-        x = self.dp2(x)
+        # x = self.dp2(x)
 
         x = self.conv3(x)
         x = self.bn3(x)
         x = self.relu(x)
-        x = self.dp3(x)
+        # x = self.dp3(x)
 
         return x
 
@@ -79,7 +79,7 @@ class NiN(nn.Module):
 
         self.conv = nn.Conv2d(self.base_width * width, 10, kernel_size=1, stride=1)
         self.bn = nn.BatchNorm2d(10) if batch_norm else lambda x: x
-        self.dp = nn.Dropout2d(p=dropout_prob)
+        # self.dp = nn.Dropout2d(p=dropout_prob)
         self.relu = nn.ReLU(inplace=True)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
@@ -90,7 +90,7 @@ class NiN(nn.Module):
         x = self.conv(x)
         x = self.bn(x)
         x = self.relu(x)
-        x = self.dp(x)
+        # x = self.dp(x)
 
         x = self.avgpool(x)
 

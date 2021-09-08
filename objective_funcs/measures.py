@@ -12,11 +12,6 @@ from objective_funcs.models import NiN
 
 
 # Adapted from https://github.com/bneyshabur/generalization-bounds/blob/master/measures.py
-# This function reparametrizes the networks with batch normalization in a way that it calculates the same function as the
-# original network but without batch normalization. Instead of removing batch norm completely, we set the bias and mean
-# to zero, and scaling and variance to one
-# Warning: This function only works for convolutional and fully connected networks. It also assumes that
-# module.children() returns the children of a module in the forward pass order. Recurssive construction is allowed.
 @torch.no_grad()
 def _reparam(model):
     def in_place_reparam(model, prev_layer=None):
@@ -140,10 +135,7 @@ def CE_TRAIN(train_history):
     return train_history[-1]
 
 
-def SOTL(train_history):
-    return sum(train_history)
-
-
+@torch.no_grad()
 def ACC(model, loader, device):
     model.eval()
     num_correct = 0
@@ -157,26 +149,26 @@ def ACC(model, loader, device):
         batch_correct = pred.eq(target.data.view_as(pred)).type(torch.FloatTensor).cpu()
         num_correct += batch_correct.sum()
 
-    return -num_correct.item() / len_loader
+    return num_correct.item() / len_loader
+
+
+def SOTL(train_history):
+    return sum(train_history)
 
 
 def PATH_NORM(model, device):
-    model = _reparam(model)
-
+    model = deepcopy(model)
     model.eval()
     for param in model.parameters():
         if param.requires_grad:
             param.data.pow_(2)
-    x = torch.ones([1] + list(model.dataset_type.D), device=device)
+    x = torch.ones([1] + [3, 32, 32], device=device)
     x = model(x)
-
+    del model
     return x.sum().item()
 
 
 def FRO_DIST(model, init_model):
-    model = _reparam(model)
-    init_model = _reparam(init_model)
-
     weights = get_weights_only(model)
     dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
     dist_reshaped_weights = get_reshaped_weights(dist_init_weights)
@@ -185,30 +177,7 @@ def FRO_DIST(model, init_model):
     return dist_fro_norms.sum().item()
 
 
-def L2_DIST(model, init_model):
-    model = _reparam(model)
-    init_model = _reparam(init_model)
-
-    weights = get_weights_only(model)
-    dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
-    dist_w_vec = get_vec_params(dist_init_weights)
-
-    return dist_w_vec.norm(p=2).item()
-
-
-def LOG_PROD_OF_SPEC(model):
-    model = _reparam(model)
-
-    weights = get_weights_only(model)
-    reshaped_weights = get_reshaped_weights(weights)
-    spec_norms = torch.cat([p.svd().S.max().unsqueeze(0) ** 2 for p in reshaped_weights])
-
-    return spec_norms.log().sum().item()
-
-
 def MAG_FLATNESS(model, train_eval_loader, train_acc, seed):
-    model = _reparam(model)
-
     mag_eps = 1e-3
     mag_sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed, mag_eps)
 
@@ -216,8 +185,6 @@ def MAG_FLATNESS(model, train_eval_loader, train_acc, seed):
 
 
 def PARAM_NORM(model):
-    model = _reparam(model)
-
     weights = get_weights_only(model)
     reshaped_weights = get_reshaped_weights(weights)
     fro_norms = torch.cat([p.norm('fro').unsqueeze(0) ** 2 for p in reshaped_weights])
@@ -226,8 +193,6 @@ def PARAM_NORM(model):
 
 
 def PACBAYES_INIT(model, init_model, train_eval_loader, train_acc, seed):
-    model = _reparam(model)
-
     sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed)
     m = len(train_eval_loader.dataset)
 
@@ -239,39 +204,39 @@ def PACBAYES_INIT(model, init_model, train_eval_loader, train_acc, seed):
 
 
 def DIST_SPEC_INIT_FFT(model, init_model):
-    model = _reparam(model)
     weights = get_weights_only(model)
     dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
 
     input_shape = (32, 32)
     fft_dist_spec_norms = torch.cat([_spectral_norm_fft(p, input_shape).unsqueeze(0) ** 2 for p in dist_init_weights])
 
-    return -fft_dist_spec_norms.sum().item()
+    return fft_dist_spec_norms.sum().item()
 
 
 @torch.no_grad()
 def get_objective(objective: OT, model, init_model, train_eval_loader, val_loader, train_history, device, seed):
+    model = _reparam(model)
+    init_model = _reparam(init_model)
+
     if objective == OT.CE_TRAIN:
         return CE_TRAIN(train_history)
     elif objective == OT.TRAIN_ACC:
-        return ACC(model, train_eval_loader, device)
+        return -ACC(model, train_eval_loader, device)
     elif objective == OT.MAG_FLATNESS:
         return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.PATH_NORM:
         return PATH_NORM(model, device)
+    elif objective == OT.PARAM_NORM:
+        return PARAM_NORM(model)
     elif objective == OT.VAL_ACC:
-        return ACC(model, val_loader, device)
+        return -ACC(model, val_loader, device)
     elif objective == OT.SOTL:
         return SOTL(train_history)
     elif objective == OT.FRO_DIST:
         return FRO_DIST(model, init_model)
-    elif objective == OT.L2_DIST:
-        return L2_DIST(model, init_model)
-    elif objective == OT.LOG_PROD_OF_SPEC:
-        return LOG_PROD_OF_SPEC(model)
     elif objective == OT.PACBAYES_INIT:
         return PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.DIST_SPEC_INIT_FFT:
-        return DIST_SPEC_INIT_FFT(model, init_model)
+        return -DIST_SPEC_INIT_FFT(model, init_model)
     else:
         raise KeyError
