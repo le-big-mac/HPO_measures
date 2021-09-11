@@ -58,11 +58,11 @@ for _ in range(200):
 
         optimizer.step()
 
-    train_acc = -ACC(model, train_eval_loader, device)
+    train_acc = ACC(model, train_eval_loader, device)
     if train_acc > 0.99:
         break
 
-test_acc = -ACC(model, test_loader, device)
+test_acc = ACC(model, test_loader, device)
 
 with open(os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs)), 'a+') as f:
-    f.write("Seed: {}, Test acc: {}".format(args.seed, test_acc))
+    f.write("Seed: {}, Test acc: {}\n".format(args.seed, test_acc))
