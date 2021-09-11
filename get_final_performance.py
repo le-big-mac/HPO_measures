@@ -44,8 +44,12 @@ model.train()
 optimizer = optim.SGD(model.parameters(), lr=float(best_hparams["lr"]), momentum=0.9, weight_decay=0)
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
 train_loader = DataLoader(train_dataset, batch_size=int(best_hparams['batch_size']), shuffle=True, num_workers=0)
+print("Depth: {}".format(int(best_hparams['depth'])))
+print("Lr: {}".format(float(best_hparams["lr"])))
+print("Batch size: {}".format(int(best_hparams['batch_size'])))
+print()
 
-for _ in range(300):
+for epoch in range(300):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
 
@@ -59,6 +63,9 @@ for _ in range(300):
         optimizer.step()
 
     train_acc = ACC(model, train_eval_loader, device)
+    print("Epoch: {}".format(epoch))
+    print("Train acc: {}".format(train_acc))
+    print("Test acc: {}". format(ACC(model, test_loader, device)))
     if train_acc > 0.99:
         break
 
