@@ -45,7 +45,7 @@ optimizer = optim.SGD(model.parameters(), lr=float(best_hparams["lr"]), momentum
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
 train_loader = DataLoader(train_dataset, batch_size=int(best_hparams['batch_size']), shuffle=True, num_workers=0)
 
-for _ in range(200):
+for _ in range(300):
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
 
