@@ -7,6 +7,7 @@ import os
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from copy import deepcopy
 
 from objective_funcs.models import NiN
 from objective_funcs.config import objective_type
@@ -40,7 +41,6 @@ best_hparams = min(hp_configs, key=lambda x: x['loss'])['config']
 
 model = NiN(int(best_hparams['depth']), 8, 25, True, 0)
 model.to(device)
-model.train()
 optimizer = optim.SGD(model.parameters(), lr=float(best_hparams["lr"]), momentum=0.9, weight_decay=0)
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
 train_loader = DataLoader(train_dataset, batch_size=int(best_hparams['batch_size']), shuffle=True, num_workers=0)
@@ -50,7 +50,9 @@ print("Batch size: {}".format(int(best_hparams['batch_size'])))
 print()
 
 for epoch in range(300):
+    model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
+
         data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()
@@ -62,13 +64,15 @@ for epoch in range(300):
 
         optimizer.step()
 
-    train_acc = ACC(model, train_eval_loader, device)
+    acc_model = deepcopy(model)
+    train_acc = ACC(acc_model, train_eval_loader, device)
     print("Epoch: {}".format(epoch))
     print("Train acc: {}".format(train_acc))
-    print("Test acc: {}". format(ACC(model, test_loader, device)))
+    print("Test acc: {}". format(ACC(acc_model, test_loader, device)))
     if train_acc > 0.99:
         break
 
+model.eval()
 test_acc = ACC(model, test_loader, device)
 
 with open(os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs)), 'a+') as f:
