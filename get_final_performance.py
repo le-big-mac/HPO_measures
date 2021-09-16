@@ -35,10 +35,11 @@ output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
 result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}.pickle".format(args.bo_method, args.epochs, args.seed))
 output_file = os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs))
 
-try:
-    os.remove(output_file)
-except OSError:
-    pass
+if args.seed == 0:
+    try:
+        os.remove(output_file)
+    except OSError:
+        pass
 
 with open(result_path, "rb") as f:
     hp_configs = pickle.load(f)
