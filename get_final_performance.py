@@ -4,6 +4,8 @@ import numpy as np
 import random
 import torch
 import os
+import wandb
+import hashlib
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -29,6 +31,9 @@ args = parser.parse_args()
 np.random.seed(args.seed)
 random.seed(args.seed)
 torch.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
@@ -46,25 +51,36 @@ with open(result_path, "rb") as f:
 
 best_hparams = min(hp_configs, key=lambda x: x['loss'])['config']
 
+hps = {"lr": float(best_hparams["lr"]), "batch_size": int(best_hparams['batch_size']),
+       "depth": int(best_hparams['depth'])}
+wandb.init(project="hpo_measures", config=hps, group=hashlib.md5(str(hps).encode('utf-8')).hexdigest())
+
 model = NiN(int(best_hparams['depth']), 8, 25, True, 0)
 model.to(device)
-optimizer = optim.SGD(model.parameters(), lr=float(best_hparams["lr"]), momentum=0.9, weight_decay=0)
+optimizer = optim.SGD(model.parameters(), lr=hps["lr"], momentum=0.9, weight_decay=0)
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
-train_loader = DataLoader(train_dataset, batch_size=int(best_hparams['batch_size']), shuffle=True, num_workers=0)
-print("Depth: {}".format(int(best_hparams['depth'])))
-print("Lr: {}".format(float(best_hparams["lr"])))
-print("Batch size: {}".format(int(best_hparams['batch_size'])))
-print()
+train_loader = DataLoader(train_dataset, batch_size=hps["batch_size"], shuffle=True, num_workers=0)
+len_loader = len(train_loader)
 
+print("Depth: {}".format(hps["depth"]))
+print("Lr: {}".format(hps["lr"]))
+print("Batch size: {}".format(hps["batch_size"]))
+print()
+print(model)
+
+step = 0
 for epoch in range(300):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
+        step = (epoch - 1) * len_loader + batch_idx
+
         data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()
 
         logits = model(data)
         cross_entropy = F.cross_entropy(logits, target)
+        wandb.log({"batch_loss": cross_entropy.item()}, step=step)
 
         cross_entropy.backward()
 
@@ -72,9 +88,12 @@ for epoch in range(300):
 
     acc_model = deepcopy(model)
     train_acc = ACC(acc_model, train_eval_loader, device)
+    test_acc = ACC(acc_model, test_loader, device)
+    wandb.log({"train_accuracy": train_acc, "test_accuracy": test_acc}, step=step)
+
     print("Epoch: {}".format(epoch))
     print("Train acc: {}".format(train_acc))
-    print("Test acc: {}". format(ACC(acc_model, test_loader, device)))
+    print("Test acc: {}". format(test_acc))
     if train_acc > 0.99:
         break
 
