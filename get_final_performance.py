@@ -51,20 +51,22 @@ with open(result_path, "rb") as f:
 
 best_hparams = min(hp_configs, key=lambda x: x['loss'])['config']
 
-hps = {"lr": float(best_hparams["lr"]), "batch_size": int(best_hparams['batch_size']),
-       "depth": int(best_hparams['depth'])}
-wandb.init(project="hpo_measures", config=hps, group=hashlib.md5(str(hps).encode('utf-8')).hexdigest())
+config = {"lr": float(best_hparams["lr"]), "batch_size": int(best_hparams['batch_size']),
+          "depth": int(best_hparams['depth']), "seed": args.seed, "dataset": args.dataset, "objective": args.objective,
+          "epochs": args.epochs}
+group = {"dataset": args.dataset, "objective": args.objective, "epochs": args.epochs}
+wandb.init(project="hpo_measures_new", config=config, group=hashlib.md5(str(group).encode('utf-8')).hexdigest())
 
-model = NiN(int(best_hparams['depth']), 8, 25, True, 0)
+model = NiN(config["depth"], 8, 25, True, 0)
 model.to(device)
-optimizer = optim.SGD(model.parameters(), lr=hps["lr"], momentum=0.9, weight_decay=0)
+optimizer = optim.Adam(model.parameters(), lr=config["lr"], weight_decay=0)
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
-train_loader = DataLoader(train_dataset, batch_size=hps["batch_size"], shuffle=True, num_workers=0)
+train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=0)
 len_loader = len(train_loader)
 
-print("Depth: {}".format(hps["depth"]))
-print("Lr: {}".format(hps["lr"]))
-print("Batch size: {}".format(hps["batch_size"]))
+print("Depth: {}".format(config["depth"]))
+print("Lr: {}".format(config["lr"]))
+print("Batch size: {}".format(config["batch_size"]))
 print()
 print(model)
 
