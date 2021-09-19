@@ -51,7 +51,7 @@ b = TuneNN(objective=args.objective, data_dir=args.data_dir, dataset=args.datase
 # create the result saving path
 output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
 os.makedirs(output_dir, exist_ok=True)
-result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}.pickle".format(args.bo_method, args.epochs, args.seed))
+result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}_Adam.pickle".format(args.bo_method, args.epochs, args.seed))
 bo_results = []
 
 if args.bo_method == 'bohb':

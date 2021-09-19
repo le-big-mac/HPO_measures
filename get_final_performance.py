@@ -37,8 +37,8 @@ torch.backends.cudnn.benchmark = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
-result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}.pickle".format(args.bo_method, args.epochs, args.seed))
-output_file = os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs))
+result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}_Adam.pickle".format(args.bo_method, args.epochs, args.seed))
+output_file = os.path.join(output_dir, "{}_epochs_{}_Adam.txt".format(args.bo_method, args.epochs))
 
 if args.seed == 0:
     try:
