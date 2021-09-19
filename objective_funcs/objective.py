@@ -32,8 +32,8 @@ class TuneNN(object):
         model.to(self.device)
         init_model = deepcopy(model)
         model.train()
-        # optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
-        optimizer = optim.Adam(model.parameters(), lr=config["lr"], weight_decay=0)
+        optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
+        # optimizer = optim.Adam(model.parameters(), lr=config["lr"], weight_decay=0)
         train_loader = DataLoader(self.train_dataset, batch_size=config['batch_size'], shuffle=True, num_workers=0)
 
         start = torch.cuda.Event(enable_timing=True)
