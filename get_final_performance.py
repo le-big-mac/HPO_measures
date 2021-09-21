@@ -74,7 +74,7 @@ step = 0
 for epoch in range(300):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
-        step = (epoch - 1) * len_loader + batch_idx
+        step = epoch * len_loader + batch_idx
 
         data, target = data.to(device), target.to(device)
 
