@@ -26,7 +26,7 @@ def get_dataloaders(data_dir: str, dataset_type: str, requires_validation: bool,
     test = dataset(data_dir, device, download=True, **test_key)
 
     # train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = None if not requires_validation else DataLoader(val, batch_size=int(0.5 * val_size), shuffle=False,
+    val_loader = None if not requires_validation else DataLoader(val, batch_size=5000, shuffle=False,
                                                                  num_workers=0)
     train_eval_loader = DataLoader(train, batch_size=5000, shuffle=False, num_workers=0)
     test_loader = DataLoader(test, batch_size=5000, shuffle=False, num_workers=0)
