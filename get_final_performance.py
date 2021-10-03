@@ -15,6 +15,7 @@ from objective_funcs.models import NiN
 from objective_funcs.config import objective_type
 from objective_funcs.dataset_helpers import get_dataloaders
 from objective_funcs.measures import ACC
+from objective_funcs.config import DatasetType
 
 
 parser = argparse.ArgumentParser()
@@ -57,7 +58,8 @@ config = {"lr": float(best_hparams["lr"]), "batch_size": int(best_hparams['batch
 group = {"dataset": args.dataset, "objective": args.objective, "epochs": args.epochs}
 wandb.init(project="hpo_measures_SGD", config=config, group=hashlib.md5(str(group).encode('utf-8')).hexdigest())
 
-model = NiN(config["depth"], 8, 25, True, 0)
+dataset_type = DatasetType[args.dataset.upper()]
+model = NiN(dataset_type, config["depth"], 8, 25, True, 0)
 model.to(device)
 optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9, weight_decay=0)
 train_dataset, train_eval_loader, _, test_loader = get_dataloaders(args.data_dir, args.dataset, False, device)
@@ -93,9 +95,6 @@ for epoch in range(300):
     test_acc = ACC(acc_model, test_loader, device)
     wandb.log({"train_accuracy": train_acc, "test_accuracy": test_acc}, step=step)
 
-    # print("Epoch: {}".format(epoch))
-    # print("Train acc: {}".format(train_acc))
-    # print("Test acc: {}". format(test_acc))
     if train_acc > 0.99:
         break
 

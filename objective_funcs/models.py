@@ -1,5 +1,5 @@
 from torch import nn
-
+from config import DatasetType
 
 class Simple_NN(nn.Module):
     def __init__(self, input_size, layer1_size, layer2_size, layer3_size, dropout_rate):
@@ -66,19 +66,19 @@ class NiNBlock(nn.Module):
 
 
 class NiN(nn.Module):
-    def __init__(self, depth: int, width: int, base_width: int, batch_norm: bool, dropout_prob: float) -> None:
+    def __init__(self, dataset: DatasetType, depth: int, width: int, base_width: int, batch_norm: bool, dropout_prob: float) -> None:
         super().__init__()
 
         self.base_width = base_width
 
         blocks = []
-        blocks.append(NiNBlock(3, self.base_width * width, batch_norm, dropout_prob))
+        blocks.append(NiNBlock(dataset.D[0], self.base_width * width, batch_norm, dropout_prob))
         for _ in range(depth - 1):
             blocks.append(NiNBlock(self.base_width * width, self.base_width * width, batch_norm, dropout_prob))
         self.blocks = nn.Sequential(*blocks)
 
-        self.conv = nn.Conv2d(self.base_width * width, 10, kernel_size=1, stride=1)
-        self.bn = nn.BatchNorm2d(10) if batch_norm else lambda x: x
+        self.conv = nn.Conv2d(self.base_width * width, dataset.K, kernel_size=1, stride=1)
+        self.bn = nn.BatchNorm2d(dataset.K) if batch_norm else lambda x: x
         # self.dp = nn.Dropout2d(p=dropout_prob)
         self.relu = nn.ReLU(inplace=True)
 

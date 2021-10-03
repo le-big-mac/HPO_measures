@@ -1,5 +1,6 @@
 from enum import Enum
 import argparse
+from typing import Tuple
 
 
 class ObjectiveType(Enum):
@@ -22,3 +23,13 @@ def objective_type(key):
         return ObjectiveType[key.upper()]
     except KeyError:
         raise argparse.ArgumentError()
+
+
+class DatasetType(Enum):
+    CIFAR10 = (1, (3, 32, 32), 10)
+    CIFAR100 = (2, (3, 32, 32), 100)
+    SVHN = (3, (3, 32, 32), 10)
+
+    def __init__(self, id: int, image_shape: Tuple[int, int, int], num_classes: int):
+        self.D = image_shape
+        self.K = num_classes

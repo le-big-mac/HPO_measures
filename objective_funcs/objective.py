@@ -9,6 +9,8 @@ from objective_funcs.models import NiN
 from objective_funcs.config import ObjectiveType
 from objective_funcs.dataset_helpers import get_dataloaders
 from objective_funcs.measures import get_objective
+from objective_funcs.measures import ACC
+from objective_funcs.config import DatasetType
 
 
 class TuneNN(object):
@@ -19,6 +21,7 @@ class TuneNN(object):
         self.objective = objective
         self.bo_method = bo_method
         self.dataset = dataset
+        self.dataset_type = DatasetType[dataset.upper()]
         self.seed = seed
         torch.manual_seed(self.seed)
         self.device = device
@@ -28,7 +31,7 @@ class TuneNN(object):
 
     def objective_function(self, config, epochs=100):
         # minimise validation error
-        model = NiN(config['depth'], 8, 25, True, 0)
+        model = NiN(self.dataset_type, config['depth'], 8, 25, True, 0)
         model.to(self.device)
         init_model = deepcopy(model)
         model.train()
@@ -57,6 +60,11 @@ class TuneNN(object):
                 cross_entropy.backward()
 
                 optimizer.step()
+
+            acc_model = deepcopy(model)
+            train_acc = ACC(acc_model, self.train_eval_loader, self.device)
+            if train_acc > 0.99:
+                break
 
             train_history.append(sum(batch_losses)/len(batch_losses))
 

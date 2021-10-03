@@ -11,6 +11,10 @@ def get_dataloaders(data_dir: str, dataset_type: str, requires_validation: bool,
         dataset = CIFAR10
         train_key = {'train': True}
         test_key = {'train': False}
+    elif dataset_type.lower() == "cifar100":
+        dataset = CIFAR100
+        train_key = {'train': True}
+        test_key = {'train': False}
     elif dataset_type.lower() == "svhn":
         dataset = SVHN
         train_key = {'split': 'train'}
@@ -54,6 +58,16 @@ def process_data(data_np: np.ndarray, targets_np: np.ndarray, device: torch.devi
 # https://gist.github.com/y0ast/f69966e308e549f013a92dc66debeeb4
 # We need to keep the class name the same as base class methods rely on it
 class CIFAR10(tv.datasets.CIFAR10):
+    def __init__(self, data_dir: str, device: torch.device, *args, **kwargs):
+        super().__init__(data_dir, *args, **kwargs)
+        self.data, self.targets = process_data(self.data, np.array(self.targets), device)
+
+    # Don't convert to PIL like torchvision default
+    def __getitem__(self, index):
+        return self.data[index], self.targets[index]
+
+
+class CIFAR100(tv.datasets.CIFAR100):
     def __init__(self, data_dir: str, device: torch.device, *args, **kwargs):
         super().__init__(data_dir, *args, **kwargs)
         self.data, self.targets = process_data(self.data, np.array(self.targets), device)
