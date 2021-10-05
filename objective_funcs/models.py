@@ -1,5 +1,5 @@
 from torch import nn
-from config import DatasetType
+from objective_funcs.config import DatasetType
 
 class Simple_NN(nn.Module):
     def __init__(self, input_size, layer1_size, layer2_size, layer3_size, dropout_rate):
