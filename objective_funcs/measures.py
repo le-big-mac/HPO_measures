@@ -150,7 +150,7 @@ def _margin(model, dataloader) -> Tensor:
             margin = correct_logit - max_other_logit
             margins.append(margin)
         del model
-        return torch.cat(margins).kthvalue(m // 10)[0]
+        return torch.cat(margins).kthvalue(m // 10)[0].item()
 
 
 def CE_TRAIN(train_history):
@@ -216,7 +216,8 @@ def SPEC_INIT_MAIN_EXPONENTIAL_MARGIN(model, init_model, train_loader):
     dist_fro_norms = torch.cat([p.norm('fro').unsqueeze(0) ** 2 for p in dist_reshaped_weights])
     margin = _margin(model, train_loader)
 
-    return fft_spec_norms.log().sum() + 2 * margin + (dist_fro_norms / fft_spec_norms).sum().log()
+    spec_init = fft_spec_norms.log().sum() + 2 * margin + (dist_fro_norms / fft_spec_norms).sum().log()
+    return spec_init.item()
 
 
 def FRO_DIST(model, init_model):
@@ -262,7 +263,7 @@ def MAG_INIT(model, init_model, train_eval_loader, train_acc, seed):
     dist_w_vec = get_vec_params(dist_init_weights)
     omega = len(dist_w_vec)
 
-    return _pacbayes_mag_bound(dist_w_vec, dist_w_vec, mag_sigma, mag_eps, omega)
+    return _pacbayes_mag_bound(dist_w_vec, dist_w_vec, mag_sigma, mag_eps, omega).item()
 
 
 def DIST_SPEC_INIT_FFT(model, init_model):

@@ -27,7 +27,8 @@ class TuneNN(object):
         self.device = device
 
         self.train_dataset, self.train_eval_loader, self.val_loader, self.test_loader \
-            = get_dataloaders(data_dir, dataset, objective == ObjectiveType.VAL_ACC, self.device)
+            = get_dataloaders(data_dir, dataset, objective in [ObjectiveType.VAL_ACC, ObjectiveType.CE_VAL],
+                              self.device)
 
     def objective_function(self, config, batches=10):
         # minimise validation error
