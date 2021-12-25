@@ -29,7 +29,7 @@ class TuneNN(object):
         self.train_dataset, self.train_eval_loader, self.val_loader, self.test_loader \
             = get_dataloaders(data_dir, dataset, objective == ObjectiveType.VAL_ACC, self.device)
 
-    def objective_function(self, config, epochs=100):
+    def objective_function(self, config, batches=10):
         # minimise validation error
         model = NiN(self.dataset_type, config['depth'], 8, 25, True, 0)
         model.to(self.device)
@@ -44,34 +44,26 @@ class TuneNN(object):
         start.record()
 
         # Train
-        train_history = []
-        for _ in range(epochs):
-            batch_losses = []
+        batch_losses = []
 
-            for batch_idx, (data, target) in enumerate(train_loader):
-                data, target = data.to(self.device), target.to(self.device)
-
-                optimizer.zero_grad()
-
-                logits = model(data)
-                cross_entropy = F.cross_entropy(logits, target)
-
-                batch_losses.append(cross_entropy.item())
-                cross_entropy.backward()
-
-                optimizer.step()
-
-            acc_model = deepcopy(model)
-            train_acc = ACC(acc_model, self.train_eval_loader, self.device)
-            del acc_model
-
-            if train_acc > 0.99:
+        for batch_idx, (data, target) in enumerate(train_loader):
+            if batch_idx > batches:
                 break
 
-            train_history.append(sum(batch_losses)/len(batch_losses))
+            data, target = data.to(self.device), target.to(self.device)
+
+            optimizer.zero_grad()
+
+            logits = model(data)
+            cross_entropy = F.cross_entropy(logits, target)
+
+            batch_losses.append(cross_entropy.item())
+            cross_entropy.backward()
+
+            optimizer.step()
 
         val_error = get_objective(self.objective, model, init_model, self.train_eval_loader, self.val_loader,
-                                  train_history, self.device, self.seed)
+                                  batch_losses, self.device, self.seed)
 
         end.record()
         torch.cuda.synchronize()

@@ -16,7 +16,7 @@ from functools import partial
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--objective', default='val_acc', type=objective_type, help='specifies objective function to use')
-parser.add_argument('--epochs', default=5, type=int, help='number of epochs to run before calculating measure')
+parser.add_argument('--batches', default=10, type=int, help='number of epochs to run before calculating measure')
 parser.add_argument('--dataset', default="cifar10", type=str, help='specifies the dataset to run on')
 parser.add_argument('--bo_method', default="tpe", type=str, help='bo method used: bohb, tpe, gpbo')
 parser.add_argument('--n_iters', default=20, type=int, help='number of BO iterations for optimization method')
@@ -51,7 +51,7 @@ b = TuneNN(objective=args.objective, data_dir=args.data_dir, dataset=args.datase
 # create the result saving path
 output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
 os.makedirs(output_dir, exist_ok=True)
-result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}.pickle".format(args.bo_method, args.epochs, args.seed))
+result_path = os.path.join(output_dir, "{}_batches_{}_seed_{}.pickle".format(args.bo_method, args.batches, args.seed))
 bo_results = []
 
 if args.bo_method == 'bohb':
@@ -123,7 +123,7 @@ elif args.bo_method == 'tpe':
 
     # initialise and run TPE
     trials = Trials()
-    objective = partial(b.eval, epochs=args.epochs)
+    objective = partial(b.eval, batches=args.batches)
     best_hyperparam = fmin(objective, space=search_space, algo=tpe.suggest, max_evals=int(args.n_iters+args.n_init),
                            trials=trials)
     # process the returned results to give the same format

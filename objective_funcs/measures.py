@@ -276,12 +276,12 @@ def DIST_SPEC_INIT_FFT(model, init_model):
 
 
 @torch.no_grad()
-def get_objective(objective: OT, model, init_model, train_eval_loader, val_loader, train_history, device, seed):
+def get_objective(objective: OT, model, init_model, train_eval_loader, val_loader, batch_losses, device, seed):
     model = _reparam(model)
     init_model = _reparam(init_model)
 
     if objective == OT.CE_TRAIN:
-        return CE_TRAIN(train_history)
+        return CE_TRAIN(batch_losses)
     elif objective == OT.CE_VAL:
         return CE_VAL(model, val_loader, device)
     elif objective == OT.TRAIN_ACC:
@@ -291,17 +291,26 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
     elif objective == OT.PATH_NORM:
         return PATH_NORM(model, device)
     elif objective == OT.PATH_NORM_OVER_EXPONENTIAL_MARGIN:
-        return PATH_NORM_OVER_EXPONENTIAL_MARGIN(model, train_eval_loader, device)
+        return -PATH_NORM_OVER_EXPONENTIAL_MARGIN(model, train_eval_loader, device)
     elif objective == OT.SPEC_INIT_MAIN_EXPONENTIAL_MARGIN:
-        return SPEC_INIT_MAIN_EXPONENTIAL_MARGIN(model, init_model, train_eval_loader)
+        return -SPEC_INIT_MAIN_EXPONENTIAL_MARGIN(model, init_model, train_eval_loader)
     elif objective == OT.SOTL:
-        return SOTL(train_history)
+        return SOTL(batch_losses)
     elif objective == OT.PACBAYES_INIT:
-        return PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        if len(batch_losses) <= 10:
+            return -PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        else:
+            return PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.MAG_FLATNESS:
-        return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        if len(batch_losses) <= 10:
+            return -MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        else:
+            return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.MAG_INIT:
-        return MAG_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        if len(batch_losses) <= 10:
+            return -MAG_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+        else:
+            return MAG_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.DIST_SPEC_INIT_FFT:
         return -DIST_SPEC_INIT_FFT(model, init_model)
     elif objective == OT.FRO_DIST:

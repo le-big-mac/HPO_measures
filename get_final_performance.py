@@ -20,7 +20,7 @@ from objective_funcs.config import DatasetType
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--objective', default='val_acc', type=objective_type, help='specifies objective function to use')
-parser.add_argument('--epochs', default=5, type=int, help='number of epochs to run before calculating measure')
+parser.add_argument('--batches', default=10, type=int, help='number of epochs to run before calculating measure')
 parser.add_argument('--dataset', default="cifar10", type=str, help='specifies the dataset to run on')
 parser.add_argument('--bo_method', default="tpe", type=str, help='bo method used: bohb, tpe, gpbo')
 parser.add_argument('--seed', type=int, default=42, help='random seed')
@@ -38,8 +38,8 @@ torch.backends.cudnn.benchmark = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 output_dir = os.path.join(args.output_path, args.dataset, args.objective.name)
-result_path = os.path.join(output_dir, "{}_epochs_{}_seed_{}.pickle".format(args.bo_method, args.epochs, args.seed))
-output_file = os.path.join(output_dir, "{}_epochs_{}.txt".format(args.bo_method, args.epochs))
+result_path = os.path.join(output_dir, "{}_batches_{}_seed_{}.pickle".format(args.bo_method, args.batches, args.seed))
+output_file = os.path.join(output_dir, "{}_batches_{}.txt".format(args.bo_method, args.batches))
 
 if args.seed == 0:
     try:
@@ -54,8 +54,8 @@ best_hparams = min(hp_configs, key=lambda x: x['loss'])['config']
 
 config = {"lr": float(best_hparams["lr"]), "batch_size": int(best_hparams['batch_size']),
           "depth": int(best_hparams['depth']), "seed": args.seed, "dataset": args.dataset, "objective": args.objective,
-          "epochs": args.epochs}
-group = {"dataset": args.dataset, "objective": args.objective, "epochs": args.epochs}
+          "batches": args.batches}
+group = {"dataset": args.dataset, "objective": args.objective, "batches": args.batches}
 wandb.init(project="hpo_measures_SGD", config=config, group=hashlib.md5(str(group).encode('utf-8')).hexdigest())
 
 dataset_type = DatasetType[args.dataset.upper()]
@@ -94,6 +94,7 @@ for epoch in range(300):
     train_acc = ACC(acc_model, train_eval_loader, device)
     test_acc = ACC(acc_model, test_loader, device)
     wandb.log({"train_accuracy": train_acc, "test_accuracy": test_acc}, step=step)
+    del acc_model
 
     if train_acc > 0.99:
         break
