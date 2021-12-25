@@ -63,6 +63,8 @@ class TuneNN(object):
 
             acc_model = deepcopy(model)
             train_acc = ACC(acc_model, self.train_eval_loader, self.device)
+            del acc_model
+
             if train_acc > 0.99:
                 break
 

@@ -5,17 +5,18 @@ from typing import Tuple
 
 class ObjectiveType(Enum):
     CE_TRAIN = 1
-    TRAIN_ACC = 2
-    MAG_FLATNESS = 3
-    PATH_NORM = 4
-    VAL_ACC = 5
-    SOTL = 6
-    PARAM_NORM = 7
-    FRO_DIST = 8
-    L2_DIST = 9
-    LOG_PROD_OF_SPEC = 10
+    CE_VAL = 2
+    TRAIN_ACC = 3
+    VAL_ACC = 4
+    PATH_NORM = 5
+    PATH_NORM_OVER_EXPONENTIAL_MARGIN = 6
+    SPEC_INIT_MAIN_EXPONENTIAL_MARGIN = 7
+    SOTL = 8
     PACBAYES_INIT = 11
-    DIST_SPEC_INIT_FFT = 12
+    MAG_FLATNESS = 12
+    MAG_INIT = 13
+    DIST_SPEC_INIT_FFT = 14
+    FRO_DIST = 15
 
 
 def objective_type(key):

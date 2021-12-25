@@ -4,6 +4,7 @@ import math
 from typing import List, Optional, Tuple
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from torch.utils.data.dataloader import DataLoader
 
@@ -102,8 +103,14 @@ def _pacbayes_sigma(
     return sigma
 
 
-def _pacbayes_bound(reference_vec: Tensor, sigma, m) -> Tensor:
-    return (reference_vec.norm(p=2) ** 2) / (4 * sigma ** 2) + math.log(m / sigma) + 10
+def _pacbayes_bound(reference_vec: Tensor, sigma) -> Tensor:
+    return (reference_vec.norm(p=2) ** 2) / (2 * sigma ** 2)
+
+
+def _pacbayes_mag_bound(reference_vec: Tensor, dist_w_vec, mag_sigma, mag_eps, omega) -> Tensor:
+    numerator = mag_eps ** 2 + (mag_sigma ** 2 + 1) * (reference_vec.norm(p=2) ** 2) / omega
+    denominator = mag_eps ** 2 + mag_sigma ** 2 * dist_w_vec ** 2
+    return 1 / 2 * (numerator / denominator).log().sum()
 
 
 def get_weights_only(model):
@@ -131,8 +138,35 @@ def _spectral_norm_fft(kernel: Tensor, input_shape: Tuple[int, int]) -> Tensor:
     return torch.tensor(spec_norm, device=kernel.device)
 
 
+def _margin(model, dataloader) -> Tensor:
+        model = deepcopy(model)
+        m = len(dataloader.dataset)
+        margins = []
+        for data, target in dataloader:
+            logits = model(data)
+            correct_logit = logits[torch.arange(logits.shape[0]), target].clone()
+            logits[torch.arange(logits.shape[0]), target] = float('-inf')
+            max_other_logit = logits.data.max(1).values  # get the index of the max logits
+            margin = correct_logit - max_other_logit
+            margins.append(margin)
+        del model
+        return torch.cat(margins).kthvalue(m // 10)[0]
+
+
 def CE_TRAIN(train_history):
     return train_history[-1]
+
+
+def CE_VAL(model, loader, device):
+    model.eval()
+    loss = 0
+
+    for data, target in loader:
+        data, target = data.to(device), target.to(device)
+        logits = model(data)
+        loss += F.cross_entropy(logits, target).item()
+
+    return loss
 
 
 @torch.no_grad()
@@ -168,6 +202,23 @@ def PATH_NORM(model, device):
     return x.sum().item()
 
 
+def PATH_NORM_OVER_EXPONENTIAL_MARGIN(model, train_loader, device):
+    return PATH_NORM(model, device) / np.exp(-_margin(model, train_loader))
+
+
+def SPEC_INIT_MAIN_EXPONENTIAL_MARGIN(model, init_model, train_loader):
+    weights = get_weights_only(model)
+    input_shape = (32, 32)
+    dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
+    dist_reshaped_weights = get_reshaped_weights(dist_init_weights)
+
+    fft_spec_norms = torch.cat([_spectral_norm_fft(p, input_shape).unsqueeze(0) ** 2 for p in weights])
+    dist_fro_norms = torch.cat([p.norm('fro').unsqueeze(0) ** 2 for p in dist_reshaped_weights])
+    margin = _margin(model, train_loader)
+
+    return fft_spec_norms.log().sum() + 2 * margin + (dist_fro_norms / fft_spec_norms).sum().log()
+
+
 def FRO_DIST(model, init_model):
     weights = get_weights_only(model)
     dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
@@ -175,13 +226,6 @@ def FRO_DIST(model, init_model):
     dist_fro_norms = torch.cat([p.norm('fro').unsqueeze(0) ** 2 for p in dist_reshaped_weights])
 
     return dist_fro_norms.sum().item()
-
-
-def MAG_FLATNESS(model, train_eval_loader, train_acc, seed):
-    mag_eps = 1e-3
-    mag_sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed, mag_eps)
-
-    return torch.tensor(1 / mag_sigma ** 2).item()
 
 
 def PARAM_NORM(model):
@@ -194,13 +238,31 @@ def PARAM_NORM(model):
 
 def PACBAYES_INIT(model, init_model, train_eval_loader, train_acc, seed):
     sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed)
-    m = len(train_eval_loader.dataset)
 
     weights = get_weights_only(model)
     dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
     dist_w_vec = get_vec_params(dist_init_weights)
 
-    return _pacbayes_bound(dist_w_vec, sigma, m).item()
+    return _pacbayes_bound(dist_w_vec, sigma).item()
+
+
+def MAG_FLATNESS(model, train_eval_loader, train_acc, seed):
+    mag_eps = 1e-3
+    mag_sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed, mag_eps)
+
+    return torch.tensor(1 / mag_sigma ** 2).item()
+
+
+def MAG_INIT(model, init_model, train_eval_loader, train_acc, seed):
+    mag_eps = 1e-3
+    mag_sigma = _pacbayes_sigma(model, train_eval_loader, train_acc, seed, mag_eps)
+
+    weights = get_weights_only(model)
+    dist_init_weights = [p - q for p, q in zip(weights, get_weights_only(init_model))]
+    dist_w_vec = get_vec_params(dist_init_weights)
+    omega = len(dist_w_vec)
+
+    return _pacbayes_mag_bound(dist_w_vec, dist_w_vec, mag_sigma, mag_eps, omega)
 
 
 def DIST_SPEC_INIT_FFT(model, init_model):
@@ -220,23 +282,29 @@ def get_objective(objective: OT, model, init_model, train_eval_loader, val_loade
 
     if objective == OT.CE_TRAIN:
         return CE_TRAIN(train_history)
+    elif objective == OT.CE_VAL:
+        return CE_VAL(model, val_loader, device)
     elif objective == OT.TRAIN_ACC:
         return -ACC(model, train_eval_loader, device)
-    elif objective == OT.MAG_FLATNESS:
-        return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
-    elif objective == OT.PATH_NORM:
-        return PATH_NORM(model, device)
-    elif objective == OT.PARAM_NORM:
-        return PARAM_NORM(model)
     elif objective == OT.VAL_ACC:
         return -ACC(model, val_loader, device)
+    elif objective == OT.PATH_NORM:
+        return PATH_NORM(model, device)
+    elif objective == OT.PATH_NORM_OVER_EXPONENTIAL_MARGIN:
+        return PATH_NORM_OVER_EXPONENTIAL_MARGIN(model, train_eval_loader, device)
+    elif objective == OT.SPEC_INIT_MAIN_EXPONENTIAL_MARGIN:
+        return SPEC_INIT_MAIN_EXPONENTIAL_MARGIN(model, init_model, train_eval_loader)
     elif objective == OT.SOTL:
         return SOTL(train_history)
-    elif objective == OT.FRO_DIST:
-        return FRO_DIST(model, init_model)
     elif objective == OT.PACBAYES_INIT:
         return PACBAYES_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+    elif objective == OT.MAG_FLATNESS:
+        return MAG_FLATNESS(model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
+    elif objective == OT.MAG_INIT:
+        return MAG_INIT(model, init_model, train_eval_loader, ACC(model, train_eval_loader, device), seed)
     elif objective == OT.DIST_SPEC_INIT_FFT:
         return -DIST_SPEC_INIT_FFT(model, init_model)
+    elif objective == OT.FRO_DIST:
+        return FRO_DIST(model, init_model)
     else:
         raise KeyError
