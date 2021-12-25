@@ -74,7 +74,7 @@ class TuneNN(object):
 
         return val_error, run_cost
 
-    def eval(self, config, epochs=100):
+    def eval(self, config, batches=10):
 
         if self.bo_method == 'tpe':
             config_standard = deepcopy(config)
@@ -86,7 +86,7 @@ class TuneNN(object):
                 elif type(h) == ConfigSpace.hyperparameters.UniformFloatHyperparameter:
                     config_standard[h.name] = float(config[h.name])
 
-            y, c = self.objective_function(config_standard, epochs)
+            y, c = self.objective_function(config_standard, batches)
             return {
                 'config': config,
                 'loss': y,
@@ -94,7 +94,7 @@ class TuneNN(object):
                 'status': STATUS_OK}
 
         elif self.bo_method == 'bohb':
-            y, c = self.objective_function(config, epochs)
+            y, c = self.objective_function(config, batches)
             return y, c
 
         elif self.bo_method == 'gp':
@@ -102,7 +102,7 @@ class TuneNN(object):
             for j, h in enumerate(self.search_space):
                 config_standard[h['name']] = config[j]
 
-            y, c = self.objective_function(config_standard, epochs)
+            y, c = self.objective_function(config_standard, batches)
             return y, c
 
     def get_search_space(self):
