@@ -24,8 +24,11 @@ module load python3/anaconda
 source activate generalization
 
 seeds="0 17 43"
+epochs="1 5 10"
 
 for s in $seeds; do
-  python3 bo_algorithms.py --seed="$s" --objective="$1" --epochs="$2" --dataset="$3" --bo_method="tpe"
-  python3 get_final_performance.py --seed="$s" --objective="$1" --epochs="$2" --dataset="$3" --bo_method="tpe"
+  for e in $epochs; do
+    python3 bo_algorithms.py --seed="$s" --objective="$1" --epochs="$e" --dataset="$2" --bo_method="tpe"
+    python3 get_final_performance.py --seed="$s" --objective="$1" --epochs="$e" --dataset="$2" --bo_method="tpe"
+  done
 done
